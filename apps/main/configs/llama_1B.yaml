@@ -21,13 +21,13 @@ distributed:
 
 model:
   dim: 2048
-  n_layers: 25
+  n_layers: 16
   n_heads: 16
 
 data:
   root_dir: data/shuffled
   sources:
-    dclm_baseline_1.0: 100.0
+    fineweb_edu: 100.0
   batch_size: 4
   prefetch_size: 1024
   seq_len: 4096
@@ -36,8 +36,8 @@ data:
   add_bos: true
   add_eos: true
   tokenizer:
-    name: tiktoken
-    path: tokenizers/cl_toplang_128k.tiktoken
+    name: sp
+    path: tokenizers/tokenizer_llama2.model
 
 profiling:
   run: true
@@ -57,7 +57,7 @@ checkpoint:
 logging:
   freq: 1
 
-async_eval_gpus: 8
+async_eval_gpus: 4
 eval:
   harness:
     tasks:
@@ -72,6 +72,9 @@ eval:
       - gsm8k
       - bbh
       - mmlu
+      - mmlu_pro
+      - mgsm
+      - french_bench
   generator:
-    max_tokens: 16384
+    max_tokens: 4096
     dtype: bf16

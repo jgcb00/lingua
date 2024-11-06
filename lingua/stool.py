@@ -23,16 +23,16 @@ class StoolArgs:
     )
     override: bool = False  # Wether to delete dump dir and restart
     nodes: int = -1  # The number of nodes to run the job on.
-    ngpu: int = 8  # The number of GPUs required per node.
-    ncpu: int = 16  # The number of CPUs allocated per GPU.
+    ngpu: int = 4  # The number of GPUs required per node.
+    ncpu: int = 8  # The number of CPUs allocated per GPU.
     mem: str = ""  # The amount of memory to allocate.
-    anaconda: str = "default"  # The path to the anaconda environment.
+    anaconda: str = "/leonardo_work/BOOST_LCustodi/script/training/lingua_env/bin/activate"  # The path to the anaconda environment.
     constraint: str = ""  # The constraint on the nodes.
     exclude: str = ""  # The nodes to exclude.
     time: int = -1  # The time limit of the job (in minutes).
-    account: str = ""
+    account: str = "BOOST_LCustodi"
     qos: str = ""
-    partition: str = "learn"
+    partition: str = "boost_usr_prod"
     stdout: bool = False
 
 
@@ -58,8 +58,8 @@ SBATCH_COMMAND = """#!/bin/bash
 #SBATCH --distribution=block
 
 # Mimic the effect of "conda init", which doesn't work for scripts
-eval "$({conda_exe} shell.bash hook)"
-source activate {conda_env_path}
+module load gcc/12.2.0 python/3.11.6--gcc--8.5.0 cuda/12.1 cudnn cutensor/1.5.0.3--gcc--12.2.0-cuda-12.1
+source activate {pip_env_path}
 
 {go_to_code_dir}
 
@@ -110,8 +110,8 @@ def validate_args(args) -> None:
     if args.time == -1:
         max_times = retrieve_max_time_per_partition()
         args.time = max_times.get(
-            args.partition, 3 * 24 * 60
-        )  # Default to 3 days if not found
+            args.partition, 1 * 24 * 60
+        )  # Default to 1 days if not found
         print(
             f"No time limit specified, using max time for partitions: {args.time} minutes"
         )
@@ -175,8 +175,7 @@ def launch_job(args: StoolArgs):
     with open(f"{dump_dir}/base_config.yaml", "w") as cfg:
         cfg.write(OmegaConf.to_yaml(args.config))
 
-    conda_exe = os.environ.get("CONDA_EXE", "conda")
-    conda_env_path = os.path.dirname(os.path.dirname(args.anaconda))
+    pip_env_path = args.anaconda
     log_output = (
         "-o $DUMP_DIR/logs/%j/%j_%t.out -e $DUMP_DIR/logs/%j/%j_%t.err"
         if not args.stdout
@@ -198,8 +197,7 @@ def launch_job(args: StoolArgs):
         exclude=args.exclude,
         time=args.time,
         partition=args.partition,
-        conda_exe=conda_exe,
-        conda_env_path=conda_env_path,
+        pip_env_path=pip_env_path,
         log_output=log_output,
         go_to_code_dir=f"cd {dump_dir}/code/" if args.copy_code else "",
     )
@@ -223,7 +221,7 @@ if __name__ == "__main__":
     @dataclass
     class DummyArgs:
         name: str
-        mode: LMTransformerArgs
+        model: LMTransformerArgs
 
     @dataclass
     class LMTransformerArgs:

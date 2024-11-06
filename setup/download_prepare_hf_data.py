@@ -23,7 +23,6 @@ def download_dataset(repo_id, local_dir, allow_patterns):
                 repo_type="dataset",
                 local_dir=local_dir,
                 allow_patterns=allow_patterns,
-                resume_download=True,
                 max_workers=16, # Don't hesitate to increase this number to lower the download time
             )
             break

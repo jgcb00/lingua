@@ -22,7 +22,7 @@ logger = logging.getLogger()
 class WandbArgs:
     job_type: Optional[str] = None
     dir: Optional[str] = None
-    project: Optional[str] = None
+    project: Optional[str] = "BlackMamba"
     entity: Optional[str] = None
     tags: Optional[List] = None
     group: Optional[str] = None
@@ -35,7 +35,7 @@ class WandbArgs:
     allow_val_change: Optional[bool] = None
     resume: Optional[Union[bool, str]] = None
     force: Optional[bool] = None
-    tensorboard: Optional[bool] = None
+    tensorboard: Optional[bool] = True
     sync_tensorboard: Optional[bool] = None
     monitor_gym: Optional[bool] = None
     save_code: Optional[bool] = None
