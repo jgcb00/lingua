@@ -149,7 +149,7 @@ def validate_args(args) -> None:
     assert args.ngpu > 0
     assert args.ncpu > 0
     assert args.nodes > 0
-    assert args.time > 0
+    # assert args.time > 0
     assert args.partition
 
 
