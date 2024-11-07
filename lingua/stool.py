@@ -113,7 +113,7 @@ def validate_args(args) -> None:
         # args.time = max_times.get(
         #     args.partition, 1 * 24 * 60
         # )  # Default to 1 days if not found
-        args.time = 1 * 24 * 60
+        args.time ="24:00:00"
         print(
             f"No time limit specified, using max time for partitions: {args.time} minutes"
         )
