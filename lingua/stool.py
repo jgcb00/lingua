@@ -34,6 +34,7 @@ class StoolArgs:
     qos: str = ""
     partition: str = "boost_usr_prod"
     stdout: bool = True
+    dump_dir: str = "../lingua_result/base_transformer"  # The directory to dump the logs and checkpoints.
 
 
 SBATCH_COMMAND = """#!/bin/bash
@@ -157,7 +158,7 @@ def validate_args(args) -> None:
 def launch_job(args: StoolArgs):
     # Set up args default and validate them depending on the cluster or partition requested
     validate_args(args)
-    dump_dir = args.config["dump_dir"]
+    dump_dir = args.dump_dir
     job_name = args.config["name"]
     print("Creating directories...")
     os.makedirs(dump_dir, exist_ok=args.dirs_exists_ok or args.override)
@@ -182,14 +183,14 @@ def launch_job(args: StoolArgs):
 
     pip_env_path = args.anaconda
     log_output = (
-        "-o $DUMP_DIR/logs/%j/%j_%t.out -e $DUMP_DIR/logs/%j/%j_%t.err"
+        "-o ../logs/%j/%j_%t.out -e ../logs/%j/%j_%t.err"
         if not args.stdout
         else ""
     )
     sbatch = SBATCH_COMMAND.format(
         name=job_name,
         script=args.script,
-        dump_dir=dump_dir,
+        dump_dir=args.config["dump_dir"],
         nodes=args.nodes,
         tasks=args.nodes * args.ngpu,
         nodes_per_run=args.nodes,
