@@ -25,7 +25,7 @@ class StoolArgs:
     nodes: int = -1  # The number of nodes to run the job on.
     ngpu: int = 4  # The number of GPUs required per node.
     ncpu: int = 8  # The number of CPUs allocated per GPU.
-    mem: str = ""  # The amount of memory to allocate.
+    mem: str = "512G"  # The amount of memory to allocate.
     anaconda: str = "/leonardo_work/BOOST_LCustodi/script/training/lingua_env/bin/activate"  # The path to the anaconda environment.
     constraint: str = ""  # The constraint on the nodes.
     exclude: str = ""  # The nodes to exclude.
