@@ -11,7 +11,7 @@ from lingua import probe
 from torch.nn.attention.flex_attention import BlockMask
 from xformers.ops import AttentionBias
 from .attention.base_attention import Attention
-from .mlp.base_mlp import FeedForward
+from .mlp.swish_mlp import FeedForward
 
 class InitStdFactor(Enum):
     DISABLED = "disabled"  # Init std is divided by 1.0

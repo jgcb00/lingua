@@ -1,3 +1,4 @@
+from functools import partial
 import torch
 import torch.nn as nn
 from typing import Optional, Union, Tuple
@@ -5,12 +6,44 @@ from torch.nn.attention.flex_attention import (
     BlockMask,
     flex_attention,
     _mask_mod_signature,
+    and_masks,
+    create_block_mask
 )
 from xformers.ops import fmha, AttentionBias
 from torch.nn import functional as F
 
 flex_attention_comp = torch.compile(flex_attention)
 
+def causal_mask(b, h, q_idx, kv_idx):
+    return q_idx >= kv_idx
+
+def sliding_window_mask(b, h, q_idx, kv_idx, slinding_window):
+    return (q_idx - kv_idx) <= slinding_window
+
+
+def create_causal_mask(seqlen, attn_impl, sliding_window):
+    if sliding_window is not None and attn_impl == "xformers":
+        return fmha.attn_bias.LocalAttentionFromBottomRightMask(
+            window_left=sliding_window - 1, window_right=0
+        )
+    elif attn_impl == "xformers":
+        return fmha.attn_bias.LowerTriangularMask()
+    elif attn_impl == "sdpa":
+        return "causal"
+    elif attn_impl == "flex_attention":
+        mask_func = causal_mask
+        if sliding_window is not None:
+            sw_mask = partial(
+                sliding_window_mask, sliding_window=sliding_window
+            )
+            mask_func = and_masks(mask_func, sw_mask)
+        #doc_mask = generate_doc_mask_mod(mask_func, lengths, kv_lengths)
+        #mask_func = and_masks(mask_func, doc_mask) 
+        return create_block_mask(mask_func, None, None, seqlen, seqlen)
+    else:
+        raise NotImplementedError(
+            f"Attention {attn_impl} with {sliding_window} sliding window not implemented"
+        )
 
 
 def lengths_to_start_ids(lengths):
@@ -194,7 +227,7 @@ class Attention(nn.Module):
         freq_cis: torch.Tensor,
         tok_idx: Optional[torch.Tensor] = None,
         mask: Optional[Union[BlockMask, AttentionBias, str]] = None,
-        attn_impl: str = "sdpa",
+        attn_impl: str = "flex_attention",
     ) -> torch.Tensor:
         # B S D
         bsz, seq_len, dim = x.shape

@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import nn
-from torch.nn.attention.flex_attention import create_block_mask, BlockMask
+from torch.nn.attention.flex_attention import BlockMask
 
 from torch.distributed._tensor import Replicate, Shard
 from torch.distributed.tensor.parallel import (
@@ -23,24 +23,9 @@ from lingua.transformer import (
     RMSNorm,
     cross_entropy,
 )
-
-
-def create_causal_mask(seqlen, attn_impl, sliding_window):
-    if sliding_window is not None and attn_impl == "xformers":
-        return fmha.attn_bias.LocalAttentionFromBottomRightMask(
-            window_left=sliding_window - 1, window_right=0
-        )
-    elif attn_impl == "xformers":
-        return fmha.attn_bias.LowerTriangularMask()
-    elif attn_impl == "sdpa":
-        return "causal"
-    elif attn_impl == "flex_attention":
-        return create_block_mask(causal_mask, None, None, seqlen, seqlen)
-    else:
-        raise NotImplementedError(
-            f"Attention {attn_impl} with {sliding_window} sliding window not implemented"
-        )
-
+from lingua.attention.base_attention import (
+    create_causal_mask
+)
 
 def attention_flops_per_token(n_layers, seq_len, dim, causal):
     # Formula from https://github.com/Dao-AILab/flash-attention/blob/main/benchmarks/benchmark_flash_attention.py#L27-L30
@@ -55,8 +40,6 @@ def get_num_flop_per_token(
     )
 
 
-def causal_mask(b, h, q_idx, kv_idx):
-    return q_idx >= kv_idx
 
 
 @dataclass
