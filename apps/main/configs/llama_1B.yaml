@@ -25,9 +25,9 @@ model:
   n_heads: 16
 
 data:
-  root_dir: data/fineweb_edu_shuffled
+  root_dir: /leonardo_work/BOOST_LCustodi/script/training/lingua/data/
   sources:
-    fineweb_edu: 100.0
+    fineweb_edu_shuffled: 100.0
   batch_size: 6
   prefetch_size: 1024
   seq_len: 4096
@@ -37,7 +37,7 @@ data:
   add_eos: true
   tokenizer:
     name: sp
-    path: tokenizers/tokenizer_llama2.model
+    path: /leonardo_work/BOOST_LCustodi/script/training/lingua/tokenizers/tokenizer_llama2.model
 
 profiling:
   run: true
