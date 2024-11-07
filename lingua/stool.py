@@ -59,7 +59,8 @@ SBATCH_COMMAND = """#!/bin/bash
 
 # Mimic the effect of "conda init", which doesn't work for scripts
 module load gcc/12.2.0 python/3.11.6--gcc--8.5.0 cuda/12.1 cudnn cutensor/1.5.0.3--gcc--12.2.0-cuda-12.1
-source activate {pip_env_path}
+source {pip_env_path}
+export HF_DATASETS_CACHE="/leonardo_work/BOOST_LCustodi/hf_cache"
 
 {go_to_code_dir}
 
@@ -129,6 +130,7 @@ def validate_args(args) -> None:
     if getattr(args, "exclude", ""):
         args.exclude = f"#SBATCH --exclude={args.exclude}"
 
+    """
     if hasattr(args, "anaconda") and args.anaconda:
         if args.anaconda == "default":
             args.anaconda = (
@@ -139,6 +141,7 @@ def validate_args(args) -> None:
         else:
             args.anaconda = f"{args.anaconda}/bin/python"
         assert os.path.isfile(args.anaconda)
+    """
 
     args.mem = args.mem or "0"
 
