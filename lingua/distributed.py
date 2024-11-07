@@ -274,7 +274,11 @@ def setup_torch_distributed(dist_args):
     )
     if torch.cuda.device_count() > 1:
         torch.cuda.set_device(local_rank)
-    torch.distributed.init_process_group(init_method="env://", backend="nccl")
+    torch.distributed.init_process_group(
+        init_method=f"env://{os.environ['MASTER_ADDR']}:29500", 
+        backend="nccl",
+        group_name=os.environ["SLURM_JOB_ID"] if "SLURM_JOB_ID" in os.environ else "",
+    )
     torch.autograd.set_detect_anomaly(dist_args.detect_anomaly)
 
 
