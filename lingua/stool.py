@@ -190,7 +190,7 @@ def launch_job(args: StoolArgs):
     sbatch = SBATCH_COMMAND.format(
         name=job_name,
         script=args.script,
-        dump_dir=args.config["dump_dir"],
+        dump_dir=dump_dir,
         nodes=args.nodes,
         tasks=args.nodes * args.ngpu,
         nodes_per_run=args.nodes,
