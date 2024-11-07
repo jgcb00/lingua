@@ -16,7 +16,7 @@ from lingua.args import dataclass_from_dict
 class StoolArgs:
     config: Any = None
     launcher: str = "sbatch"  # Can be sbatch or bash if already in salloc
-    script: str = "apps.main.train"  # The script to run.
+    script: str = "apps/main/train.py"  # The script to run.
     copy_code: bool = True  # Wether to copy code to dump dir
     dirs_exists_ok: bool = (
         False  # Wether to copy new code and config and run regardless that dir exists
@@ -33,7 +33,7 @@ class StoolArgs:
     account: str = "BOOST_LCustodi"
     qos: str = ""
     partition: str = "boost_usr_prod"
-    stdout: bool = False
+    stdout: bool = True
 
 
 SBATCH_COMMAND = """#!/bin/bash
@@ -67,7 +67,7 @@ export HF_DATASETS_CACHE="/leonardo_work/BOOST_LCustodi/hf_cache"
 export OMP_NUM_THREADS=1
 export LAUNCH_WITH="SBATCH"
 export DUMP_DIR={dump_dir}
-srun {log_output} -n {tasks} -N {nodes_per_run} python -u -m {script} config=$DUMP_DIR/base_config.yaml
+srun {log_output} -n {tasks} -N {nodes_per_run} python {script} config=$DUMP_DIR/base_config.yaml
 """
 
 
