@@ -108,10 +108,11 @@ def retrieve_max_time_per_partition() -> Dict[str, int]:
 def validate_args(args) -> None:
     # Set maximum time limit if not specified
     if args.time == -1:
-        max_times = retrieve_max_time_per_partition()
-        args.time = max_times.get(
-            args.partition, 1 * 24 * 60
-        )  # Default to 1 days if not found
+        # max_times = retrieve_max_time_per_partition()
+        # args.time = max_times.get(
+        #     args.partition, 1 * 24 * 60
+        # )  # Default to 1 days if not found
+        args.time = 1 * 24 * 60
         print(
             f"No time limit specified, using max time for partitions: {args.time} minutes"
         )
