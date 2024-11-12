@@ -169,6 +169,7 @@ def read_jsonl(
         offset=offset,
         current_iter=current_iter,
     )
+    logger.info(f"Reading {file_path} at position {position}")
     with open(file_path, "r") as file:
         file.seek(position)
         while line := file.readline():
