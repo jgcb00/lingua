@@ -277,11 +277,11 @@ class DiffAttention(nn.Module):
                         
         assert mask is None or isinstance(mask, BlockMask)
         xq1, xk1, _xv = map(lambda e: e.transpose(1, 2), (xq1, xk1, xv))
-        attn1 = flex_attention_comp(xq1, xk1, _xv, block_mask=mask)
+        attn1 = flex_attention(xq1, xk1, _xv, block_mask=mask)
         attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
         xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
-        attn2 = flex_attention_comp(xq2, xk2, _xv, block_mask=mask)
+        attn2 = flex_attention(xq2, xk2, _xv, block_mask=mask)
         attn2 = attn2.transpose(1, 2).contiguous()
         
         lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(xq)

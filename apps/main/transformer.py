@@ -86,8 +86,6 @@ class LMTransformer(BaseTransformer):
     ):
         bsz, seqlen = token_values.shape
 
-        print("token_values.shape", token_values.shape)
-        print("token_values.shape", token_values)
         h = self.tok_embeddings(token_values)
 
         mask = (
