@@ -8,7 +8,7 @@ optim:
   lr: 3e-3
   weight_decay: 0.033
   warmup: 5000
-  lr_min_ratio: 0.000001
+  lr_min_ratio: 0.00001
   clip: 1.0
 
 distributed:
@@ -27,7 +27,7 @@ model:
 data:
   root_dir: /leonardo_work/BOOST_LCustodi/script/training/lingua/data/
   sources:
-    fineweb_edu_shuffled: 100.0
+    fineweb_edu_350bt_shuffled: 100.0
   batch_size: 7
   prefetch_size: 1024
   seq_len: 4096
