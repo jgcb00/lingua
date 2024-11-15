@@ -51,9 +51,10 @@ SBATCH_COMMAND = """#!/bin/bash
 #SBATCH --time={time}
 #SBATCH --partition={partition}
 #SBATCH --mem={mem}
-
-#SBATCH --output={dump_dir}/logs/%j/%j.stdout
-#SBATCH --error={dump_dir}/logs/%j/%j.stderr
+##/logs/%j/%j.stdout
+##/logs/%j/%j.stderr
+#SBATCH --output={dump_dir}/result.stdout
+#SBATCH --error={dump_dir}/result.stderr
 
 #SBATCH --open-mode=append
 #SBATCH --signal=USR2@120
@@ -159,7 +160,7 @@ def validate_args(args) -> None:
 def launch_job(args: StoolArgs):
     # Set up args default and validate them depending on the cluster or partition requested
     validate_args(args)
-    dump_dir = str(Path(args.dump_dir).absolute())
+    dump_dir = str(Path(args.dump_dir).resolve())
     job_name = args.config["name"]
     print("Creating directories...")
     os.makedirs(dump_dir, exist_ok=args.dirs_exists_ok or args.override)

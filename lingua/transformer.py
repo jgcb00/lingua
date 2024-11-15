@@ -10,7 +10,10 @@ from torch.nn import functional as F
 from torch.nn.attention.flex_attention import BlockMask
 from xformers.ops import AttentionBias
 from .attention.base_attention import Attention
-from .mlp.swish_mlp import FeedForward
+from .mlp.swish_mlp import SwishFeedForward
+from .mlp.relu_mlp import ReluFeedForward
+from .mlp.FAN import FanFeedForward
+from .mlp.XNet import XnetFeedForward
 from .norm.rms_norm import RMSNorm
 class InitStdFactor(Enum):
     DISABLED = "disabled"  # Init std is divided by 1.0
@@ -27,6 +30,7 @@ class BaseTransformerArgs:
     n_heads: Optional[int] = None
     n_kv_heads: Optional[int] = None
 
+    ffn_type: str = "swish"
     ffn_dim_multiplier: Optional[float] = None
 
     multiple_of: int = 256
@@ -142,12 +146,23 @@ class TransformerBlock(nn.Module):
             rope_theta=args.rope_theta,
             block_id=block_id,
         )
-        self.feed_forward = FeedForward(
-            dim=args.dim,
-            hidden_dim=4 * args.dim,
-            multiple_of=args.multiple_of,
-            ffn_dim_multiplier=args.ffn_dim_multiplier,
-        )
+        if args.ffn_type == "swish":
+            self.feed_forward = SwishFeedForward
+        elif args.ffn_type == "relu":
+            self.feed_forward = ReluFeedForward
+        elif args.ffn_type == "fan":
+            self.feed_forward = FanFeedForward
+        elif args.ffn_type == "xnet":
+            self.feed_forward = XnetFeedForward
+        else:
+            raise ValueError(f"Unknown ffn_type: {args.ffn_type}")
+            
+        self.feed_forward = self.feed_forward(
+                dim=args.dim,
+                hidden_dim=4 * args.dim,
+                multiple_of=args.multiple_of,
+                ffn_dim_multiplier=args.ffn_dim_multiplier,
+            )
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
 

@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from typing import Optional
 
-class FeedForward(nn.Module):
+class SwishFeedForward(nn.Module):
     def __init__(
         self,
         dim: int,
