@@ -82,7 +82,7 @@ class LMTransformer(BaseTransformer):
         target: Optional[torch.Tensor] = None,
         tok_idx: Optional[torch.Tensor] = None,
         mask: Optional[Union[BlockMask, AttentionBias, torch.Tensor, str]] = None,
-        attn_impl: str = "sdpa",
+        attn_impl: str = "flex_attention",
     ):
         bsz, seqlen = token_values.shape
 

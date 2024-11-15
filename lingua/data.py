@@ -605,6 +605,7 @@ def build_dataloader(
     multi_state = tokenizer_state["it_state"]
 
     path_to_iter = setup_sources(multi_state)
+    logger.info("Setup sources Done")
     data_it = choose_source(
         source_to_iterator=path_to_iter,
         source_to_state=multi_state["source_to_state"],
@@ -612,6 +613,7 @@ def build_dataloader(
         sources=multi_state["sources"],
         rng_state=multi_state["rng_state"],
     )
+    logger.info("Choose source Done")
     data_it = tokenize(
         data_it,
         tokenizer_state["add_bos"],
@@ -619,11 +621,13 @@ def build_dataloader(
         tokenizer_state["name"],
         tokenizer_state["path"],
     )
+    logger.info("Tokenize Done")
 
     data_it = pack_tokens(
         data_it,
         pack_state,
     )
+    logger.info("Pack tokens Done")
 
     data_it = batch_and_shuffle_prefetched_sequences(
         data_loader=data_it,
@@ -633,6 +637,7 @@ def build_dataloader(
         prefetch_size=state["prefetch_size"],
         state=state,
     )
+    logger.info("Batch and shuffle Done")
     yield data_it
     for it in path_to_iter.values():
         it.close()

@@ -7,12 +7,11 @@ from typing import Optional, Union, Tuple
 import torch
 from torch import nn
 from torch.nn import functional as F
-from lingua import probe
 from torch.nn.attention.flex_attention import BlockMask
 from xformers.ops import AttentionBias
 from .attention.base_attention import Attention
 from .mlp.swish_mlp import FeedForward
-
+from .norm.rms_norm import RMSNorm
 class InitStdFactor(Enum):
     DISABLED = "disabled"  # Init std is divided by 1.0
     GLOBAL_DEPTH = "global_depth"  # Init std is divided by sqrt(2*n_layers)
@@ -120,39 +119,9 @@ class RotaryEmbedding(torch.nn.Module):
             return self.freqs_cis[0:seqlen]
 
 
-class RMSNorm(nn.Module):
-    """
-    Initialize the RMSNorm normalization layer.
-
-    Args:
-        dim (int): The dimension of the input tensor.
-        eps (float, optional): A small value added to the denominator for numerical stability. Default is 1e-6.
-
-    Attributes:
-        eps (float): A small value added to the denominator for numerical stability.
-        weight (nn.Parameter): Learnable scaling parameter.
-
-    """
-
-    def __init__(self, dim: int, eps: float = 1e-6):
-        super().__init__()
-        self.eps = eps
-        self.weight = nn.Parameter(torch.ones(dim))
-
-    def _norm(self, x: torch.Tensor):
-        return x * torch.rsqrt((x * x).mean(-1, keepdim=True) + self.eps)
-
-    def forward(self, x: torch.Tensor):
-        x = probe.log_stats(x, "resid")
-        output = self._norm(x.float())
-        return (output * self.weight.float()).type_as(x)
-
-    def reset_parameters(self):
-        torch.nn.init.ones_(self.weight)  # type: ignore
-
 
 class TransformerBlock(nn.Module):
-    def __init__(self, args: BaseTransformerArgs):
+    def __init__(self, args: BaseTransformerArgs, block_id: int = 0):
         super().__init__()
 
         assert (args.head_dim is not None) or (
@@ -171,6 +140,7 @@ class TransformerBlock(nn.Module):
             n_heads=self.n_heads,
             n_kv_heads=self.n_kv_heads,
             rope_theta=args.rope_theta,
+            block_id=block_id,
         )
         self.feed_forward = FeedForward(
             dim=args.dim,
@@ -187,7 +157,7 @@ class TransformerBlock(nn.Module):
         freq_cis: torch.Tensor,
         tok_idx: Optional[torch.Tensor] = None,
         mask: Optional[Union[BlockMask, AttentionBias, str]] = None,
-        attn_impl: str = "sdpa",
+        attn_impl: str = "flex_attention",
     ) -> torch.Tensor:
 
         h = x + self.attention(
@@ -222,15 +192,15 @@ class BaseTransformer(nn.Module):
         )
 
         self.layers = nn.ModuleList()
-        for _ in range(args.n_layers):
-            self.layers.append(TransformerBlock(args))
+        for block_id in range(args.n_layers):
+            self.layers.append(TransformerBlock(args, block_id))
 
     def forward(
         self,
         h,
         tok_idx: Optional[torch.Tensor] = None,
         mask: Optional[Union[BlockMask, AttentionBias, str]] = None,
-        attn_impl: str = "sdpa",
+        attn_impl: str = "flex_attention",
     ):
 
         freq_cis = self.rope_embeddings(seqlen=self.max_seqlen, tok_idx=tok_idx)

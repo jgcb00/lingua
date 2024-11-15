@@ -11,6 +11,9 @@ from torch.nn.attention.flex_attention import (
 )
 from xformers.ops import fmha, AttentionBias
 from torch.nn import functional as F
+import math
+from lingua.norm.rms_norm import RMSNorm
+
 
 flex_attention_comp = torch.compile(flex_attention)
 
@@ -180,7 +183,11 @@ def causal_mask(b, h, q_idx, kv_idx):
     return q_idx >= kv_idx
 
 
-class Attention(nn.Module):
+
+def lambda_init_fn(depth):
+    return 0.8 - 0.6 * math.exp(-0.3 * depth)
+
+class DiffAttention(nn.Module):
     def __init__(
         self,
         dim: int,
@@ -193,12 +200,13 @@ class Attention(nn.Module):
         super().__init__()
 
         self.dim = dim
-        self.head_dim = head_dim
+        self.head_dim = head_dim // 2
         self.rope_theta = rope_theta
 
         self.n_heads = n_heads
         self.n_kv_heads = n_kv_heads
         self.heads_per_group = self.n_heads // self.n_kv_heads
+
 
         self.wq = nn.Linear(
             dim,
@@ -221,6 +229,13 @@ class Attention(nn.Module):
             dim,
             bias=False,
         )
+        self.lambda_init = lambda_init_fn(block_id)
+        self.lambda_q1 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
+        self.lambda_k1 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
+        self.lambda_q2 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
+        self.lambda_k2 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
+
+        self.subln = RMSNorm(2 * self.head_dim, eps=1e-5, elementwise_affine=True)
 
     def forward(
         self,
@@ -238,8 +253,8 @@ class Attention(nn.Module):
 
         output_shape = xq.shape
         # B S D -> B S H D
-        xq = xq.view(bsz, seq_len, self.n_heads, self.head_dim)
-        xk = xk.view(bsz, seq_len, self.n_kv_heads, self.head_dim)
+        xq = xq.view(bsz, seq_len, 2* self.n_heads, self.head_dim)
+        xk = xk.view(bsz, seq_len, 2 * self.n_kv_heads, self.head_dim)
         xv = xv.view(bsz, seq_len, self.n_kv_heads, self.head_dim)
 
         xq, xk = apply_rotary_emb(xq, xk, 1, freq_cis[0:seq_len])
@@ -249,41 +264,38 @@ class Attention(nn.Module):
         if hasattr(self, "kv_cache"):
             xk, xv = self.kv_cache.update(xk, xv, tok_idx)
 
-        xk = repeat_kv(xk, self.heads_per_group, dim=2)
-        xv = repeat_kv(xv, self.heads_per_group, dim=2)
-
-        if attn_impl == "flex_attention":
-            assert mask is None or isinstance(mask, BlockMask)
-            xq, xk, xv = map(lambda e: e.transpose(1, 2), (xq, xk, xv))
-            output = flex_attention_comp(xq, xk, xv, block_mask=mask)
-            output = output.transpose(1, 2).contiguous()  # B H S D -> B S H D
-
-        elif attn_impl == "fmha":
-            assert mask is None or isinstance(mask, AttentionBias)
-            output = fmha.memory_efficient_attention(xq, xk, xv, attn_bias=mask)
-            # This uses B S H D instead of B H S D of pytorch
-
-        elif attn_impl == "sdpa":
-            xq, xk, xv = map(lambda e: e.transpose(1, 2), (xq, xk, xv))
-            assert mask is None or isinstance(mask, (str, torch.Tensor))
-            is_causal = (mask == "causal") if isinstance(mask, str) else False
-            mask = mask if isinstance(mask, torch.Tensor) else None
-            output = F.scaled_dot_product_attention(
-                xq,
-                xk,
-                xv,
-                is_causal=is_causal,
-                attn_mask=mask,
-            )
-            output = output.transpose(1, 2).contiguous()  # B H S D -> B S H D
-        else:
+        xq = xq.reshape(bsz, seq_len, self.n_heads, 2, self.head_dim)
+        xk = xk.reshape(bsz, seq_len, self.n_kv_heads, 2, self.head_dim)
+        
+        xq1, xq2 = xq[:, :, :, 0], xq[:, :, :, 1]
+        xk1, xk2 = xk[:, :, :, 0], xk[:, :, :, 1]
+        
+        if attn_impl != "flex_attention":
             raise NotImplementedError(
-                f"Attention implementation {attn_impl} not supported"
+                f"Diff Attention implementation on {attn_impl} not supported"
             )
+                        
+        assert mask is None or isinstance(mask, BlockMask)
+        xq1, xk1, _xv = map(lambda e: e.transpose(1, 2), (xq1, xk1, xv))
+        attn1 = flex_attention_comp(xq1, xk1, _xv, block_mask=mask)
+        attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
-        output = self.wo(output.reshape(output_shape))
+        xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
+        attn2 = flex_attention_comp(xq2, xk2, _xv, block_mask=mask)
+        attn2 = attn2.transpose(1, 2).contiguous()
+        
+        lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(xq)
+        lambda_2 = torch.exp(torch.sum(self.lambda_q2 * self.lambda_k2, dim=-1).float()).type_as(xq)
+        lambda_full = lambda_1 - lambda_2 + self.lambda_init
+        attn = attn1 - lambda_full * attn2
+        
+        attn = self.subln(attn)
+        attn = attn * (1 - self.lambda_init)
+        attn = attn.reshape(bsz, seq_len, self.n_heads * 2 * self.head_dim)
 
-        return output
+        attn = self.wo(attn.reshape(output_shape))
+
+        return attn
 
     def reset_parameters(self, init_std=None, factor=1.0):
         init_std = init_std or (self.dim ** (-0.5))

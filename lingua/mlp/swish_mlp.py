@@ -14,7 +14,7 @@ class FeedForward(nn.Module):
     ):
         super().__init__()
 
-        hidden_dim = int(hidden_dim / 2)
+        hidden_dim = int(2 * hidden_dim / 3)
         if ffn_dim_multiplier is not None:
             hidden_dim = int(ffn_dim_multiplier * hidden_dim)
         hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)

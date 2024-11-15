@@ -28,7 +28,7 @@ data:
   root_dir: /leonardo_work/BOOST_LCustodi/script/training/lingua/data/
   sources:
     fineweb_edu_shuffled: 100.0
-  batch_size: 6
+  batch_size: 7
   prefetch_size: 1024
   seq_len: 4096
   n_views: 2
