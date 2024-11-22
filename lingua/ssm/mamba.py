@@ -10,14 +10,14 @@ from torch.nn import functional as F
 
 from causal_conv1d.causal_conv1d_varlen import causal_conv1d_varlen_states
 
-from apps.mamba.component.causal_conv1d_compilable import (
+from .causal_conv1d_compilable import (
     causal_conv1d_fn,
     causal_conv1d_update,
 )
-from apps.mamba.component.ssm_compilable import mamba_chunk_scan_combined
+from .ssm_compilable import mamba_chunk_scan_combined
 from mamba_ssm.ops.triton.selective_state_update import selective_state_update
 
-from lingua.transformer import InitStdFactor, RMSNorm
+from lingua.norm import RMSNorm
 from lingua.probe import log_stats
 
 
@@ -31,43 +31,17 @@ class InitArgs:
     A_init_min: float = 1
     A_init_max: float = 16
 
-
 @dataclass
-class BaseMambaArgs:
-
-    dim: int = 512
-    n_layers: int = 8
+class MambaArgs:
     n_heads: int = 8
-
     state_dim: int = 128
     n_groups: int = 1
     conv_size: Optional[int] = None
-
     dt_bias: bool = False
-    D_has_head_dim: bool = False
+    D_has_head_dim: Optional[bool] = False
     learnable_init_states: bool = False
-
     ssm_chunk_size: int = 256
-
-    vocab_size: int = -1
-
-    ffn_dim_multiplier: Optional[float] = None
-
     multiple_of: int = 256
-    """
-    Enforces that the SwiGLU hidden layer size is a multiple
-    of large power of 2.
-    """
-
-    norm_eps: float = 1e-5
-
-    init_use_depth: bool = False
-    init_base_std: Optional[float] = None
-    init_std_factor: str = "disabled"
-
-    init_args: InitArgs = field(default_factory=InitArgs)
-    seed: int = 42
-
 
 class SSM(nn.Module):
     def __init__(
@@ -362,17 +336,14 @@ class SSM(nn.Module):
 
         self.D.data.fill_(1.0)
 
-
-class MambaBlock(nn.Module):
-    def __init__(self, args: BaseMambaArgs):
+class Mamba(nn.Module):
+    def __init__(self, args: MambaArgs, dim: int) -> None:
         super().__init__()
-
-        self.ssm_norm = RMSNorm(args.dim, args.norm_eps)
         self.ssm = SSM(
-            dim=args.dim,
-            hidden_dim=3 * args.dim,
+            dim=dim,
+            hidden_dim=3 * dim,
             multiple_of=args.multiple_of,
-            ffn_dim_multiplier=args.ffn_dim_multiplier,
+            ffn_dim_multiplier=None,
             state_dim=args.state_dim,
             n_heads=args.n_heads,
             n_groups=args.n_groups,
@@ -382,7 +353,7 @@ class MambaBlock(nn.Module):
             learnable_init_states=args.learnable_init_states,
             chunk_size=args.ssm_chunk_size,
         )
-
+        
     def forward(
         self,
         x: torch.Tensor,
@@ -390,51 +361,11 @@ class MambaBlock(nn.Module):
         cu_seqlens: Optional[torch.Tensor],
         ssm_impl: str = "ssm",
     ) -> torch.Tensor:
-        x = x + self.ssm(
-            self.ssm_norm(x), tok_idx=tok_idx, cu_seqlens=cu_seqlens, ssm_impl=ssm_impl
-        )
+        x = self.ssm(x, tok_idx=tok_idx, cu_seqlens=cu_seqlens, ssm_impl=ssm_impl)
         return x
-
+    
     def init_weights(self, init_std=None, factor=1.0, init_args: InitArgs = InitArgs()):
-        self.ssm_norm.reset_parameters()
         self.ssm.reset_parameters(init_std, factor, init_args)
 
-
-class BaseMamba(nn.Module):
-    def __init__(self, args: BaseMambaArgs):
-        super().__init__()
-        self.model_dim = args.dim
-        self.init_base_std = args.init_base_std
-
-        self.init_args = args.init_args
-        self.init_std_factor = InitStdFactor(args.init_std_factor)
-
-        self.layers = nn.ModuleList()
-        for _ in range(args.n_layers):
-            self.layers.append(MambaBlock(args))
-
-    def forward(
-        self,
-        h: torch.Tensor,
-        tok_idx: Optional[torch.Tensor],
-        cu_seqlens: Optional[torch.Tensor],
-        ssm_impl: str = "ssm",
-    ) -> torch.Tensor:
-        for layer in self.layers:
-            h = layer(h, tok_idx=tok_idx, cu_seqlens=cu_seqlens, ssm_impl=ssm_impl)
-        return h
-
-    def reset_parameters(self):
-        pass
-
-    def init_weights(self):
-        self.reset_parameters()
-        for depth, layer in enumerate(self.layers):
-            factor = {
-                InitStdFactor.CURRENT_DEPTH: (2 * (depth + 1)) ** 0.5,
-                InitStdFactor.GLOBAL_DEPTH: (2 * (len(self.layers) + 1)) ** 0.5,
-                InitStdFactor.DIM_RATIO: self.model_dim / 4096,
-                InitStdFactor.DISABLED: 1.0,
-            }[self.init_std_factor]
-
-            layer.init_weights(self.init_base_std, factor)
+    def reset_parameters(self, init_std=None, factor=1.0, init_args: InitArgs = InitArgs()):
+        self.ssm.reset_parameters(init_std, factor, init_args)

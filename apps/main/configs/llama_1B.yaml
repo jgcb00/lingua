@@ -28,7 +28,7 @@ data:
   root_dir: /leonardo_work/BOOST_LCustodi/script/training/lingua/data/
   sources:
     fineweb_edu_350bt_shuffled: 100.0
-  batch_size: 7
+  batch_size: 10
   prefetch_size: 1024
   seq_len: 4096
   n_views: 2
@@ -66,25 +66,30 @@ eval:
     tasks:
       - hellaswag
       - nq_open
-      - piqa
-      - siqa
-      - csatqa
-      - winogrande
-      - arc
+      - task: piqa
+        dataset_kwargs:
+          trust_remote_code: true
+      - social_iqa
+      - task: winogrande
+        dataset_kwargs:
+          trust_remote_code: true
+      - arc_easy
+      - arc_challenge
       - race
       - gsm8k
       - bbh
-      - mmlu
+      #- mmlu
       - mmlu_pro
-      - mgsm
-      - french_bench
-      - agieval_en
-      - agieval_cn
+      #- mgsm_direct
+      #- mgsm_cot_native
+      #- french_bench
+      #- agieval_en
+      #- agieval_cn
       #- spanish_bench
       - squad_completion
-      - squad_v2
+      # - squadv2
       - drop
-      - ifeval
+      #- ifeval
 
   generator:
     max_tokens: 4096

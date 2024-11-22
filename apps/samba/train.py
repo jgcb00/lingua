@@ -56,16 +56,18 @@ from lingua.metrics import (
 from lingua.optim import OptimArgs, build_optimizer
 from lingua.profiling import ProfilerArgs, maybe_run_profiler
 from lingua.tokenizer import build_tokenizer
-from apps.main.transformer import (
-    LMTransformerArgs,
-    LMTransformer,
+from apps.samba.samba import (
+    LMSambaArgs,
+    LMSamba,
     get_num_flop_per_token,
     build_fsdp_grouping_plan,
-    tp_parallelize,
     get_no_recompute_ops,
 )
 from lingua.probe import AutoProbeD
 from lingua.stool import StoolArgs, launch_job
+
+from einops._torch_specific import allow_ops_in_compiled_graph
+
 
 import wandb
 
@@ -91,7 +93,7 @@ class TrainArgs:
 
     data: DataArgs = field(default_factory=DataArgs)
     optim: OptimArgs = field(default_factory=OptimArgs)
-    model: LMTransformerArgs = field(default_factory=LMTransformerArgs)
+    model: LMSambaArgs = field(default_factory=LMSambaArgs)
     distributed: DistributedArgs = field(default_factory=DistributedArgs)
     env: EnvironmentArgs = field(default_factory=EnvironmentArgs)
 
@@ -218,6 +220,7 @@ def every_n_steps(train_state, freq, acc_step=None, acc_freq=None):
 
 
 def train(args: TrainArgs):
+    allow_ops_in_compiled_graph()
     with ExitStack() as context_stack:
         tokenizer = build_tokenizer(args.data.tokenizer.name, args.data.tokenizer.path)
         validate_train_args(
@@ -251,7 +254,7 @@ def train(args: TrainArgs):
 
         # Initializing Model in meta device allows us to initialize models much bigger than 1 gpu's memory
         with torch.device("meta"):
-            model = LMTransformer(args.model)
+            model = LMSamba(args.model)
         logger.info(f"Model is built !")
 
         model_param_count = get_num_params(model)
@@ -262,7 +265,7 @@ def train(args: TrainArgs):
             args.model,
             args.distributed,
             fsdp_grouping_plan=build_fsdp_grouping_plan(args.model),
-            tp_parallelize=tp_parallelize,
+            tp_parallelize=None,
             no_recompute_ops=get_no_recompute_ops(),
         )
 
@@ -421,6 +424,7 @@ def train(args: TrainArgs):
             # For logging we undo that scaling
             loss = loss.detach() * args.grad_acc_steps
 
+            # Warning: FSDP + clip grad norm for_each=true triggers seg faults on pytorch nightly
             grad_norm = torch.nn.utils.clip_grad_norm_(
                 model.parameters(), max_norm=args.optim.clip, foreach=True
             )
@@ -548,6 +552,7 @@ def train(args: TrainArgs):
 
                 eval_args.global_step = train_state.step
                 eval_args.ckpt_dir = str(checkpoint.existing_saves[-1])
+                print("args.dumpdir : ", args.dump_dir)
                 eval_args.dump_dir = str(
                     os.path.join(
                         args.dump_dir,
@@ -559,10 +564,11 @@ def train(args: TrainArgs):
                 if args.async_eval_gpus is None:
                     launch_eval(eval_args)
                 elif get_is_master():
+                    print("eval_args.dump_dir : ", eval_args.dump_dir)
                     if wandb.run is not None and args.logging.wandb is not None:
                         eval_args.wandb = deepcopy(args.logging.wandb)
                     assert args.async_eval_gpus > 0
-                    logger.info(f"Launching evals on {args.async_eval_gpus} gpus")
+                    logger.info(f"Launching evals on {args.async_eval_gpus} gpus with {eval_args}")
                     with clean_env():
                         launch_job(
                             StoolArgs(
@@ -570,6 +576,8 @@ def train(args: TrainArgs):
                                 script="apps.main.eval",
                                 copy_code=False,
                                 nodes=args.async_eval_gpus // 4,
+                                qos="lowest",
+                                dump_dir=eval_args.dump_dir,
                             )
                         )
 
@@ -605,13 +613,13 @@ def main():
     @dataclass
     class DummyArgs:
         name: str
-        model: LMTransformerArgsgs
+        model: LMSambaArgs
 
     @dataclass
-    class LMTransformerArgsgs:
+    class LMSambaArgs:
         dim: int
 
-    Then you can pass model.dim=32 to change values in LMTransformerArgsgs
+    Then you can pass model.dim=32 to change values in LMSambaArgs
     or just name=tictac for top level attributes.
 
     The behavior here is as follows:

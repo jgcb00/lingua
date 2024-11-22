@@ -180,7 +180,7 @@ def causal_mask(b, h, q_idx, kv_idx):
     return q_idx >= kv_idx
 
 
-class Attention(nn.Module):
+class SoftmaxAttention(nn.Module):
     def __init__(
         self,
         dim: int,

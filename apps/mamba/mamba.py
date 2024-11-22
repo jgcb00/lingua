@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 from lingua.transformer import RMSNorm, cross_entropy
-from apps.mamba.core_mamba import BaseMambaArgs, BaseMamba
+from lingua.lingua.mamba import BaseMambaArgs, BaseMamba
 
 
 @dataclass

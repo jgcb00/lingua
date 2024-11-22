@@ -41,23 +41,53 @@ def get_num_flop_per_token(
 
 
 
+class StateCache(nn.Module):
+    def __init__(
+        self, bsz, n_heads, head_dim, state_dim, conv_size, conv_dim, dtype, device
+    ):
+        super().__init__()
+        state_shape = (bsz, n_heads, head_dim, state_dim)
+        if conv_size is None:
+            conv_shape = (0,)
+        else:
+            conv_shape = (bsz, conv_dim, conv_size)
+
+        self.register_buffer(
+            "conv_cache",
+            torch.zeros(conv_shape, dtype=dtype, device=device),
+            persistent=False,
+        )
+        self.register_buffer(
+            "state_cache",
+            torch.zeros(state_shape, dtype=dtype, device=device),
+            persistent=False,
+        )
+
+    def reset(self):
+        self.conv_cache.zero_()
+        self.state_cache.zero_()
+
 
 @dataclass
-class LMTransformerArgs(BaseTransformerArgs):
+class LMSambaArgs(BaseSambaArgs):
 
     seed: int = 42
 
     vocab_size: int = -1
     weight_tying: bool = False
 
-    sliding_window: Optional[int] = None
+    sliding_window: Optional[int] = 2048
+    loss_reduction: str = "mean"
+    
+    vocab_size: int = -1
 
 
-class LMTransformer(BaseTransformer):
-    def __init__(self, args: LMTransformerArgs):
+class LMSamba(BaseSamba):
+    def __init__(self, args: LMSambaArgs):
         super().__init__(args)
         self.weight_tying = args.weight_tying
         self.sliding_window = args.sliding_window
+        self.loss_reduction = args.loss_reduction
 
         assert args.vocab_size > 0
 
@@ -81,8 +111,10 @@ class LMTransformer(BaseTransformer):
         token_values: torch.Tensor,
         target: Optional[torch.Tensor] = None,
         tok_idx: Optional[torch.Tensor] = None,
+        cu_seqlens: Optional[torch.Tensor] = None,
         mask: Optional[Union[BlockMask, AttentionBias, torch.Tensor, str]] = None,
         attn_impl: str = "flex_attention",
+        ssm_impl: str = "ssm",
     ):
         bsz, seqlen = token_values.shape
 
@@ -94,11 +126,23 @@ class LMTransformer(BaseTransformer):
             else create_causal_mask(seqlen, attn_impl, self.sliding_window)
         )
 
-        h = super().forward(h, tok_idx=tok_idx, mask=mask, attn_impl=attn_impl)
+        h = super().forward(
+            h, tok_idx=tok_idx, 
+            mask=mask, 
+            attn_impl=attn_impl,
+            cu_seqlens=cu_seqlens,
+            mask=mask,
+            attn_impl=attn_impl,
+            ssm_impl=ssm_impl
+        )
 
         logits = self.output(self.norm(h))
         if target is not None:
-            return cross_entropy(logits, target)
+            return cross_entropy(
+                logits.flatten(0,1),
+                target.flatten(0,1),
+                reduction=self.loss_reduction
+            )
         else:
             return logits
 
@@ -123,14 +167,22 @@ class LMTransformer(BaseTransformer):
                 b=3 * init_std,
             )
 
+    @torch.inference_mode()
+    def init_weights(self):
+        super().init_weights()
 
 # Optional policy for activation checkpointing. With None, we stick to the default (defined distributed.py: default_no_recompute_ops)
 def get_no_recompute_ops():
-    return None
+    return {
+        torch.ops.aten.mm.default,
+        torch.ops.aten._scaled_mm.default,
+        torch.ops.c10d_functional.reduce_scatter_tensor.default,
+        torch.ops.mamba_ssm.ssm_chunk_scan_combined_fwd.default,
+    }
 
 
 # Optional and only used for fully shard options (fsdp) is choose. Highly recommanded for large models
-def build_fsdp_grouping_plan(model_args: LMTransformerArgs):
+def build_fsdp_grouping_plan(model_args: LMSambaArgs):
     group_plan: Tuple[int, bool] = []
 
     # Grouping and output seperately
@@ -143,63 +195,3 @@ def build_fsdp_grouping_plan(model_args: LMTransformerArgs):
     group_plan.append(("output", True))
 
     return group_plan
-
-
-# Optional and only used for model/tensor parallelism when tp_size > 1
-def tp_parallelize(model, tp_mesh, model_args: LMTransformerArgs, distributed_args):
-    assert model_args.dim % distributed_args.tp_size == 0
-    assert model_args.vocab_size % distributed_args.tp_size == 0
-    assert model_args.n_heads % distributed_args.tp_size == 0
-    assert (model_args.n_kv_heads or 0) % distributed_args.tp_size == 0
-    assert model_args.n_heads % (model_args.n_kv_heads or 1) == 0
-
-    # Embedding layer tp
-    main_plan = {}
-    main_plan["tok_embeddings"] = ColwiseParallel(
-        input_layouts=Replicate(), output_layouts=Shard(1)
-    )
-    main_plan["norm"] = SequenceParallel()
-    main_plan["output"] = ColwiseParallel(
-        input_layouts=Shard(1), output_layouts=Replicate()
-    )
-
-    parallelize_module(
-        model,
-        tp_mesh,
-        main_plan,
-    )
-
-    # Attention layers tp
-    for layer in model.layers:
-        layer_plan = {}
-
-        layer_plan["attention"] = PrepareModuleInput(
-            input_layouts=(Shard(1), None),
-            desired_input_layouts=(Replicate(), None),
-        )
-        layer_plan["attention_norm"] = SequenceParallel()
-        layer_plan["attention.wq"] = ColwiseParallel()
-        layer_plan["attention.wk"] = ColwiseParallel()
-        layer_plan["attention.wv"] = ColwiseParallel()
-        layer_plan["attention.wo"] = RowwiseParallel(output_layouts=Shard(1))
-
-        # Feedforward layers tp
-        layer_plan["feed_forward"] = PrepareModuleInput(
-            input_layouts=(Shard(1),),
-            desired_input_layouts=(Replicate(),),
-        )
-        layer_plan["ffn_norm"] = SequenceParallel()
-        layer_plan["feed_forward.w1"] = ColwiseParallel()
-        layer_plan["feed_forward.w3"] = ColwiseParallel()
-        layer_plan["feed_forward.w2"] = RowwiseParallel(output_layouts=Shard(1))
-
-        parallelize_module(
-            layer,
-            tp_mesh,
-            layer_plan,
-        )
-
-        # Adjusting the number of heads and kv heads according to the tp size
-        attn_layer = layer.attention
-        attn_layer.n_heads = attn_layer.n_heads // distributed_args.tp_size
-        attn_layer.n_kv_heads = attn_layer.n_kv_heads // distributed_args.tp_size

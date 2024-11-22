@@ -7,14 +7,10 @@ from typing import Optional, Union, Tuple
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.nn.attention.flex_attention import BlockMask
-from xformers.ops import AttentionBias
-from .attention.base_attention import Attention
-from .mlp.swish_mlp import SwishFeedForward
-from .mlp.relu_mlp import ReluFeedForward
-from .mlp.FAN import FanFeedForward
-from .mlp.XNet import XnetFeedForward
+from .mlp import MLP, MlpArgs
+from .attention import Attention, AttentionArgs, BlockMask, AttentionBias
 from .norm.rms_norm import RMSNorm
+
 class InitStdFactor(Enum):
     DISABLED = "disabled"  # Init std is divided by 1.0
     GLOBAL_DEPTH = "global_depth"  # Init std is divided by sqrt(2*n_layers)
@@ -26,18 +22,10 @@ class InitStdFactor(Enum):
 class BaseTransformerArgs:
     dim: int = 512
     n_layers: int = 8
-    head_dim: Optional[int] = None
-    n_heads: Optional[int] = None
-    n_kv_heads: Optional[int] = None
-
-    ffn_type: str = "swish"
-    ffn_dim_multiplier: Optional[float] = None
-
-    multiple_of: int = 256
-
+    attention : AttentionArgs
+    mlp : MlpArgs
+    
     norm_eps: float = 1e-5
-
-    rope_theta: float = 10000.0
 
     init_base_std: Optional[float] = None
     init_std_factor: str = "disabled"
@@ -127,41 +115,15 @@ class RotaryEmbedding(torch.nn.Module):
 class TransformerBlock(nn.Module):
     def __init__(self, args: BaseTransformerArgs, block_id: int = 0):
         super().__init__()
-
-        assert (args.head_dim is not None) or (
-            args.n_heads is not None
-        ), "Should specify at least head_dim or n_heads"
-        self.head_dim = args.head_dim or args.dim // args.n_heads
-        self.n_heads = args.n_heads or args.dim // args.head_dim
-        self.n_kv_heads = args.n_kv_heads or self.n_heads
-
-        assert args.n_heads % self.n_kv_heads == 0
-        assert args.dim % args.n_heads == 0
-
         self.attention = Attention(
+            args.attention,
             dim=args.dim,
-            head_dim=self.head_dim,
-            n_heads=self.n_heads,
-            n_kv_heads=self.n_kv_heads,
-            rope_theta=args.rope_theta,
             block_id=block_id,
         )
-        if args.ffn_type == "swish":
-            self.feed_forward = SwishFeedForward
-        elif args.ffn_type == "relu":
-            self.feed_forward = ReluFeedForward
-        elif args.ffn_type == "fan":
-            self.feed_forward = FanFeedForward
-        elif args.ffn_type == "xnet":
-            self.feed_forward = XnetFeedForward
-        else:
-            raise ValueError(f"Unknown ffn_type: {args.ffn_type}")
-            
-        self.feed_forward = self.feed_forward(
+        self.feed_forward = MLP(
+                args.mlp,
                 dim=args.dim,
-                hidden_dim=4 * args.dim,
-                multiple_of=args.multiple_of,
-                ffn_dim_multiplier=args.ffn_dim_multiplier,
+                block_id=block_id,
             )
         self.attention_norm = RMSNorm(args.dim, eps=args.norm_eps)
         self.ffn_norm = RMSNorm(args.dim, eps=args.norm_eps)
@@ -201,8 +163,8 @@ class BaseTransformer(nn.Module):
         self.init_std_factor = InitStdFactor(args.init_std_factor)
         self.max_seqlen = args.max_seqlen
         self.rope_embeddings = RotaryEmbedding(
-            theta=args.rope_theta,
-            head_dim=args.head_dim or args.dim // args.n_heads,
+            theta=args.attention.rope_theta,
+            head_dim=args.attention.head_dim or args.dim // args.attention.n_heads,
             max_seqlen=args.max_seqlen,
         )
 

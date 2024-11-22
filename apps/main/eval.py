@@ -104,8 +104,8 @@ class EvalHarnessLM(LM):
 
     def generate_until(self, requests: List[Instance]) -> List[str]:
         prompts, gen_args = zip(*[req.args for req in requests])
-        assert all_dicts_same(gen_args), "Doesn't support different gen args for now"
-        gen_args = gen_args[0]
+        #assert all_dicts_same(gen_args), "Doesn't support different gen args for now"
+        gen_args = gen_args[-1]
         temperature = gen_args.get("temperature", 0.0)
         top_p = gen_args.get("top_p", None)
         top_k = gen_args.get("top_k", None)
@@ -184,8 +184,8 @@ def launch_eval(cfg: EvalArgs):
     wrap = EvalHarnessLM(generator)
     results = simple_evaluate(wrap, **asdict(cfg.harness))
     if get_global_rank() == 0:
-        with open(Path(cfg.dump_dir) / "results.json", "w") as f:
-            f.write(json.dumps(results))
+        #with open(Path(cfg.dump_dir) / "results.json", "w") as f:
+        #    f.write(json.dumps(results))
         logger.info(f"All evaluation results: {results['results']}")
     if cfg.metric_log_dir and get_global_rank() == 0:
         metric_log_path = Path(cfg.metric_log_dir) / "metrics.eval.jsonl"

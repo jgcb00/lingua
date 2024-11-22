@@ -263,7 +263,7 @@ def setup_torch_distributed(dist_args):
     logger.info(f"ENV: {os.environ}")
 
     # set GPU device
-    assert 0 <= local_rank < 8
+    assert 0 <= local_rank < 4, f"Invalid local rank: {local_rank}"
     if dist_args.matmul_allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
         logger.warning(

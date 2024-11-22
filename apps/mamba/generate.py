@@ -16,7 +16,7 @@ from apps.main.generate import (
     PackedCausalTransformerGeneratorArgs,
     load_consolidated_model_and_tokenizer,
 )
-from apps.mamba.core_mamba import SSM
+from lingua.lingua.ssm.mamba import SSM
 from apps.mamba.mamba import LMMambaArgs, LMMamba, StateCache
 
 

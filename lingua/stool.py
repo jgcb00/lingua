@@ -71,7 +71,7 @@ export WANDB_MODE=offline
 export OMP_NUM_THREADS=1
 export LAUNCH_WITH="SBATCH"
 export DUMP_DIR=../
-srun {log_output} -n {tasks} -N {nodes_per_run} python -u -m {script} config=../base_config.yaml
+srun {log_output} -n {tasks} -N {nodes_per_run} python -u -m {script} config={dump_dir}/base_config.yaml
 """
 
 

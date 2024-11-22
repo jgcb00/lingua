@@ -7,12 +7,13 @@ import math
 import logging
 from torch import nn
 from torch.optim import AdamW, lr_scheduler
-
+from lingua.optimizer.mars import MARS
 logger = logging.getLogger()
 
 
 @dataclass
 class OptimArgs:
+    optimizer: str = "adamw"
     lr: float = 3e-4
     weight_decay: float = 0.1
     epsilon: float = 1e-8
@@ -99,14 +100,21 @@ def build_lr_fn(args: OptimArgs, n_steps: int):
 
 def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
     logger.info("Starting build of optimizer...")
-    optimizer = AdamW(
-        model.parameters(),
-        lr=args.lr,
-        betas=(args.beta1, args.beta2),
-        weight_decay=args.weight_decay,
-        eps=args.epsilon,
-        fused=True,  # Faster optim.step but can throw errors
-    )
+    if args.optimizer == "adamw":
+        optimizer = AdamW(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
+            weight_decay=args.weight_decay,
+            eps=args.epsilon,
+            clip_value=args.clip,
+        )
+    elif args.optimizer == "mars":
+        optimizer = MARS(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
+        )
 
     # scheduler
     lr_fn = build_lr_fn(args, n_steps)
