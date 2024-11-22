@@ -70,7 +70,7 @@ export WANDB_MODE=offline
 
 export OMP_NUM_THREADS=1
 export LAUNCH_WITH="SBATCH"
-export DUMP_DIR=../
+export DUMP_DIR={dump_dir}
 srun {log_output} -n {tasks} -N {nodes_per_run} python -u -m {script} config={dump_dir}/base_config.yaml
 """
 
@@ -189,6 +189,11 @@ def launch_job(args: StoolArgs):
         if not args.stdout
         else ""
     )
+    if "evals" in dump_dir:
+        code_dir = Path(args.dump_dir).parent.parent / "code"
+        code_dir = code_dir.absolute()
+    else : 
+        code_dir = Path(args.dump_dir) / "code"
     sbatch = SBATCH_COMMAND.format(
         name=job_name,
         script=args.script,
@@ -207,7 +212,7 @@ def launch_job(args: StoolArgs):
         partition=args.partition,
         pip_env_path=pip_env_path,
         log_output=log_output,
-        go_to_code_dir=f"cd {dump_dir}/code/" if args.copy_code else "",
+        go_to_code_dir=f"cd {code_dir}",
     )
 
     print("Writing sbatch command ...")

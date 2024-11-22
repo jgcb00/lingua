@@ -22,7 +22,8 @@ distributed:
 model:
   dim: 2048
   n_layers: 12
-  n_heads: 16
+  attention:
+    n_heads: 16
 
 data:
   root_dir: /leonardo_work/BOOST_LCustodi/script/training/lingua/data/

@@ -1,6 +1,6 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, Union, Tuple
 
@@ -22,8 +22,8 @@ class InitStdFactor(Enum):
 class BaseTransformerArgs:
     dim: int = 512
     n_layers: int = 8
-    attention : AttentionArgs
-    mlp : MlpArgs
+    attention : AttentionArgs = field(default_factory=AttentionArgs)
+    mlp : MlpArgs = field(default_factory=MlpArgs)
     
     norm_eps: float = 1e-5
 

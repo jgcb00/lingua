@@ -33,10 +33,10 @@ class WandbArgs:
     anonymous: Optional[str] = None
     mode: Optional[str] = None
     allow_val_change: Optional[bool] = None
-    resume: Optional[Union[bool, str]] = None
+    resume: Optional[Union[bool, str]] = "allow"
     force: Optional[bool] = None
     tensorboard: Optional[bool] = True
-    sync_tensorboard: Optional[bool] = None
+    sync_tensorboard: Optional[bool] = True
     monitor_gym: Optional[bool] = None
     save_code: Optional[bool] = None
     id: Optional[str] = None
