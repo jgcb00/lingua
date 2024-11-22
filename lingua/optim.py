@@ -107,7 +107,6 @@ def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
             betas=(args.beta1, args.beta2),
             weight_decay=args.weight_decay,
             eps=args.epsilon,
-            clip_value=args.clip,
         )
     elif args.optimizer == "mars":
         optimizer = MARS(
