@@ -32,7 +32,7 @@ class Attention(nn.Module):
         self.n_heads = args.n_heads or dim // self.head_dim
         self.n_kv_heads = args.n_kv_heads or self.n_heads
         
-        assert args.dim % args.n_heads == 0
+        assert dim % args.n_heads == 0
         
         if args.type == "base":
             self.attention = SoftmaxAttention
