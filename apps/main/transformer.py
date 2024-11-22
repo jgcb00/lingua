@@ -23,7 +23,7 @@ from lingua.transformer import (
     RMSNorm,
     cross_entropy,
 )
-from lingua.lingua.attention.softmax_attention import (
+from lingua.attention.softmax_attention import (
     create_causal_mask
 )
 
