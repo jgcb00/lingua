@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 @dataclass
 class AttentionArgs:
-    n_heads: int
+    n_heads: int = 16
     head_dim: Optional[int] = None
     n_kv_heads: Optional[int] = None
     rope_theta: float = 10000.0

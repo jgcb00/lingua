@@ -20,7 +20,7 @@ class InitStdFactor(Enum):
 
 @dataclass
 class BaseTransformerArgs:
-    attention : AttentionArgs
+    attention : AttentionArgs = field(default_factory=AttentionArgs)
     mlp : MlpArgs = field(default_factory=MlpArgs)
 
     dim: int = 512
