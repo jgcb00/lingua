@@ -16,6 +16,8 @@ class AttentionArgs:
     type: str = "base"
     
     def __post_init__(self):
+        if self.n_kv_heads is None:
+            self.n_kv_heads = self.n_heads
         assert self.n_heads % self.n_kv_heads == 0
 
 
