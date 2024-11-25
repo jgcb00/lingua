@@ -555,7 +555,8 @@ def train(args: TrainArgs):
                         EVAL_FOLDER_NAME.format(train_state.step),
                     )
                 )
-                eval_args.metric_log_dir = args.dump_dir
+                # eval_args.metric_log_dir = args.dump_dir
+                eval_args.metric_log_dir = eval_args.dump_dir
                 if args.async_eval_gpus is None:
                     launch_eval(eval_args)
                 elif get_is_master():

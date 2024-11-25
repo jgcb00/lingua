@@ -48,7 +48,8 @@ SBATCH_COMMAND = """#!/bin/bash
 #SBATCH --nodes={nodes}
 #SBATCH --gres=gpu:{ngpus}
 #SBATCH --cpus-per-gpu={ncpu}
-#SBATCH --time={time}
+##SBATCH --time={time}
+#SBATCH --time=12:00:00
 #SBATCH --partition={partition}
 #SBATCH --mem={mem}
 ##/logs/%j/%j.stdout
@@ -162,7 +163,7 @@ def launch_job(args: StoolArgs):
     validate_args(args)
     dump_dir = str(Path(args.dump_dir).resolve())
     job_name = args.config["name"]
-    print("Creating directories...")
+    print("Creating directories...", dump_dir)
     os.makedirs(dump_dir, exist_ok=args.dirs_exists_ok or args.override)
     if args.override:
         confirm = input(
@@ -179,7 +180,7 @@ def launch_job(args: StoolArgs):
         print("Copying code ...")
         copy_dir(os.getcwd(), f"{dump_dir}/code")
 
-    print("Saving config file ...")
+    print("Saving config file ...", f"{dump_dir}/base_config.yaml")
     with open(f"{dump_dir}/base_config.yaml", "w") as cfg:
         cfg.write(OmegaConf.to_yaml(args.config))
 
@@ -190,10 +191,11 @@ def launch_job(args: StoolArgs):
         else ""
     )
     if "evals" in dump_dir:
-        code_dir = Path(args.dump_dir).parent.parent / "code"
+        code_dir = Path(dump_dir).parent.parent / "code"
         code_dir = code_dir.absolute()
     else : 
-        code_dir = Path(args.dump_dir) / "code"
+        code_dir = Path(dump_dir) / "code"
+        code_dir = code_dir.absolute()
     sbatch = SBATCH_COMMAND.format(
         name=job_name,
         script=args.script,
