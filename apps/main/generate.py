@@ -18,7 +18,7 @@ from lingua.args import dataclass_from_dict
 from lingua.checkpoint import CONSOLIDATE_NAME
 from lingua.tokenizer import Tokenizer, build_tokenizer
 from lingua.attention import Attention
-from lingua.lingua.attention.softmax_attention import (
+from lingua.attention.softmax_attention import (
     causal_mask,
     generate_doc_mask_mod,
     lengths_to_local_ids,
