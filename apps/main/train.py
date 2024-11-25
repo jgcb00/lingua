@@ -571,6 +571,7 @@ def train(args: TrainArgs):
                                 script="apps.main.eval",
                                 copy_code=False,
                                 nodes=args.async_eval_gpus // 4,
+                                dump_dir=eval_args.dump_dir,
                             )
                         )
 

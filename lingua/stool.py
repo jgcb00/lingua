@@ -217,7 +217,7 @@ def launch_job(args: StoolArgs):
         go_to_code_dir=f"cd {code_dir}",
     )
 
-    print("Writing sbatch command ...")
+    print("Writing sbatch command ...", f"{dump_dir}/submit.slurm")
     with open(f"{dump_dir}/submit.slurm", "w") as f:
         f.write(sbatch)
 
