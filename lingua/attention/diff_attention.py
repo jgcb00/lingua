@@ -252,12 +252,13 @@ class DiffAttention(nn.Module):
         xv = self.wv(x.view_as(x))
 
         output_shape = xq.shape
+        xq, xk = apply_rotary_emb(xq, xk, 1, freq_cis[0:seq_len])
+
         # B S D -> B S H D
         xq = xq.view(bsz, seq_len, 2 * self.n_heads, self.head_dim)
         xk = xk.view(bsz, seq_len, 2 * self.n_kv_heads, self.head_dim)
         xv = xv.view(bsz, seq_len, self.n_kv_heads, 2, self.head_dim)
 
-        xq, xk = apply_rotary_emb(xq, xk, 1, freq_cis[0:seq_len])
 
         # This condition helps us be easily compatible
         # with inference by adding a pluggable KVCache
