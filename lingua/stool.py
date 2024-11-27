@@ -37,13 +37,6 @@ class StoolArgs:
     stdout: bool = True
     dump_dir: str = ""  # The directory to dump the logs and checkpoints.
 
-    def __post_init__(self):
-        if self.dump_dir == "":
-            try:
-                self.dump_dir = f"../lingua_result/{self.config['name']}"
-            except TypeError:
-                self.dump_dir = f"../lingua_result/{self.config.name}"
-
 
 SBATCH_COMMAND = """#!/bin/bash
 

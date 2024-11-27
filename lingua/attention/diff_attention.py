@@ -235,7 +235,7 @@ class DiffAttention(nn.Module):
         self.lambda_q2 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
         self.lambda_k2 = nn.Parameter(torch.zeros(self.head_dim, dtype=torch.float32).normal_(mean=0,std=0.1))
 
-        self.subln = RMSNorm(2 * self.head_dim, eps=1e-5, elementwise_affine=True)
+        self.subln = RMSNorm(2 * self.head_dim, eps=1e-5)
 
     def forward(
         self,
