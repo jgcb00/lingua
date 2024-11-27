@@ -210,22 +210,22 @@ class DiffAttention(nn.Module):
 
         self.wq = nn.Linear(
             dim,
-            n_heads * head_dim,
+            n_heads * (head_dim * 2),
             bias=False,
         )
         self.wk = nn.Linear(
             dim,
-            n_kv_heads * head_dim,
+            n_kv_heads * (head_dim * 2),
             bias=False,
         )
         self.wv = nn.Linear(
             dim,
-            n_kv_heads * head_dim,
+            n_kv_heads * (head_dim * 2),
             bias=False,
         )
 
         self.wo = nn.Linear(
-            n_heads * head_dim,
+            n_heads * (head_dim * 2),
             dim,
             bias=False,
         )
@@ -258,7 +258,6 @@ class DiffAttention(nn.Module):
         xq = xq.view(bsz, seq_len, 2 * self.n_heads, self.head_dim)
         xk = xk.view(bsz, seq_len, 2 * self.n_kv_heads, self.head_dim)
         xv = xv.view(bsz, seq_len, self.n_kv_heads, 2, self.head_dim)
-
 
         # This condition helps us be easily compatible
         # with inference by adding a pluggable KVCache
