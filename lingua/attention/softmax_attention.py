@@ -22,7 +22,7 @@ def sliding_window_mask(b, h, q_idx, kv_idx, slinding_window):
 
 
 def create_causal_mask(seqlen, attn_impl, sliding_window):
-   """
+    """
     if sliding_window is not None and attn_impl == "xformers":
         return fmha.attn_bias.LocalAttentionFromBottomRightMask(
             window_left=sliding_window - 1, window_right=0
