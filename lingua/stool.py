@@ -35,7 +35,11 @@ class StoolArgs:
     qos: str = ""
     partition: str = "boost_usr_prod"
     stdout: bool = True
-    dump_dir: str = "../lingua_result/base_transformer"  # The directory to dump the logs and checkpoints.
+    dump_dir: str = ""  # The directory to dump the logs and checkpoints.
+
+    def __post_init__(self):
+        if self.dump_dir == "":
+            self.dump_dir = f"../lingua_result/{self.config['name']}"
 
 
 SBATCH_COMMAND = """#!/bin/bash
