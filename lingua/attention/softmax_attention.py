@@ -22,6 +22,7 @@ def sliding_window_mask(b, h, q_idx, kv_idx, slinding_window):
 
 
 def create_causal_mask(seqlen, attn_impl, sliding_window):
+   """
     if sliding_window is not None and attn_impl == "xformers":
         return fmha.attn_bias.LocalAttentionFromBottomRightMask(
             window_left=sliding_window - 1, window_right=0
@@ -31,19 +32,20 @@ def create_causal_mask(seqlen, attn_impl, sliding_window):
     elif attn_impl == "sdpa":
         return "causal"
     elif attn_impl == "flex_attention":
-        mask_func = causal_mask
-        if sliding_window is not None:
-            sw_mask = partial(
-                sliding_window_mask, sliding_window=sliding_window
-            )
-            mask_func = and_masks(mask_func, sw_mask)
-        #doc_mask = generate_doc_mask_mod(mask_func, lengths, kv_lengths)
-        #mask_func = and_masks(mask_func, doc_mask) 
-        return create_block_mask(mask_func, None, None, seqlen, seqlen)
-    else:
-        raise NotImplementedError(
-            f"Attention {attn_impl} with {sliding_window} sliding window not implemented"
+    """
+    mask_func = causal_mask
+    if sliding_window is not None:
+        sw_mask = partial(
+            sliding_window_mask, sliding_window=sliding_window
         )
+        mask_func = and_masks(mask_func, sw_mask)
+    #doc_mask = generate_doc_mask_mod(mask_func, lengths, kv_lengths)
+    #mask_func = and_masks(mask_func, doc_mask) 
+    return create_block_mask(mask_func, None, None, seqlen, seqlen)
+    # else:
+    #     raise NotImplementedError(
+    #         f"Attention {attn_impl} with {sliding_window} sliding window not implemented"
+    #     )
 
 
 def lengths_to_start_ids(lengths):
@@ -252,12 +254,12 @@ class SoftmaxAttention(nn.Module):
         xk = repeat_kv(xk, self.heads_per_group, dim=2)
         xv = repeat_kv(xv, self.heads_per_group, dim=2)
 
-        if attn_impl == "flex_attention":
-            assert mask is None or isinstance(mask, BlockMask)
-            xq, xk, xv = map(lambda e: e.transpose(1, 2), (xq, xk, xv))
-            output = flex_attention(xq, xk, xv, block_mask=mask)
-            output = output.transpose(1, 2).contiguous()  # B H S D -> B S H D
-
+        # if attn_impl == "flex_attention":
+        assert mask is None or isinstance(mask, BlockMask)
+        xq, xk, xv = map(lambda e: e.transpose(1, 2), (xq, xk, xv))
+        output = flex_attention(xq, xk, xv, block_mask=mask)
+        output = output.transpose(1, 2).contiguous()  # B H S D -> B S H D
+        """
         elif attn_impl == "fmha":
             assert mask is None or isinstance(mask, AttentionBias)
             output = fmha.memory_efficient_attention(xq, xk, xv, attn_bias=mask)
@@ -280,7 +282,7 @@ class SoftmaxAttention(nn.Module):
             raise NotImplementedError(
                 f"Attention implementation {attn_impl} not supported"
             )
-
+        """
         output = self.wo(output.reshape(output_shape))
 
         return output
