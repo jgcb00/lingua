@@ -39,7 +39,10 @@ class StoolArgs:
 
     def __post_init__(self):
         if self.dump_dir == "":
-            self.dump_dir = f"../lingua_result/{self.config['name']}"
+            try:
+                self.dump_dir = f"../lingua_result/{self.config['name']}"
+            except TypeError:
+                self.dump_dir = f"../lingua_result/{self.config.name}"
 
 
 SBATCH_COMMAND = """#!/bin/bash
