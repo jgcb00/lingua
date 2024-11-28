@@ -24,7 +24,7 @@ from lingua.attention.softmax_attention import (
     lengths_to_local_ids,
     lengths_to_start_ids,
 )
-from torch.nn.attention.flex_attention import create_block_mask
+from torch.nn.attention.flex_attention import create_block_mask, BlockMask
 
 
 def sample_top_p(probs: torch.Tensor, p: float) -> torch.Tensor:
@@ -313,8 +313,8 @@ class PackedCausalTransformerGenerator:
         out = self.model.forward(
             current_token,
             tok_idx=self.current_tok_id,  # n_seqs
-            mask=mask,
-            attn_impl="sdpa",
+            mask=None,
+            attn_impl="flex_attention",
         )
         self.current_tok_id += 1
         return out
