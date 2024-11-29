@@ -28,13 +28,13 @@ class XnetFeedForward(nn.Module):
             bias=False,
         )
         self.d = nn.Parameter(
-            torch.Tensor(hidden_dim, 1)
+            torch.Tensor(hidden_dim)
         )
         self.lambda1 = nn.Parameter(
-            torch.Tensor(hidden_dim, 1)
+            torch.Tensor(hidden_dim)
         )
         self.lambda2 = nn.Parameter(
-            torch.Tensor(hidden_dim, 1)
+            torch.Tensor(hidden_dim)
         )
         self.w2 = nn.Linear(
             hidden_dim,

@@ -8,6 +8,7 @@ import logging
 from torch import nn
 from torch.optim import AdamW, lr_scheduler
 from lingua.optimizer.mars import MARS
+from lingua.optimizer.ademamix import AdEMAMix
 logger = logging.getLogger()
 
 
@@ -19,6 +20,8 @@ class OptimArgs:
     epsilon: float = 1e-8
     beta1: float = 0.9
     beta2: float = 0.95
+    beta3 : float = 0.9999
+    alpha: float = 6.0
     clip: float = 1.0
 
     scheduler: str = "cosine"
@@ -113,6 +116,15 @@ def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
             model.parameters(),
             lr=args.lr,
             betas=(args.beta1, args.beta2),
+        )
+    elif args.optimizer == "ademamix":
+        optimizer = AdEMAMix(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.beta1, args.beta2, args.beta3),
+            alpha=args.alpha,
+            eps=args.epsilon,
+            weight_decay=args.weight_decay,
         )
 
     # scheduler
