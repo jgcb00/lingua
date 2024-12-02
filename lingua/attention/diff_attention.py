@@ -169,8 +169,6 @@ def apply_rotary_emb(
     seq_dim: int,
     freqs_cis: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    print("xq : ", xq.shape)
-    print("xk : ", xk.shape)
     xq_ = xq.reshape(*xq.shape[:-1], -1, 1, 2)  # B S H D -> B S H D/2 1 2
     xk_ = xk.reshape(*xk.shape[:-1], -1, 1, 2)  # B S H D -> B S H D/2 1 2
     freqs_cis = reshape_for_broadcast(
@@ -285,7 +283,7 @@ class DiffAttention(nn.Module):
         #print("xk1 : ", xk1.shape)
         #print("_xv : ", _xv.shape)
         attn1 = flash_attn_func(xq1, xk1, xv, causal=True)
-        attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
+        #attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
         #xq2 = xq2.reshape(bsz, seq_len, self.n_heads, self.head_dim)
         #xk2 = xk2.reshape(bsz, seq_len, self.n_kv_heads, self.head_dim)
@@ -294,7 +292,7 @@ class DiffAttention(nn.Module):
         #print("_xv : ", _xv.shape)
         #xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
         attn2 = flash_attn_func(xq2, xk2, xv, causal=True)
-        attn2 = attn2.transpose(1, 2).contiguous()
+        #attn2 = attn2.transpose(1, 2).contiguous()
         
         lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(xq)
         lambda_2 = torch.exp(torch.sum(self.lambda_q2 * self.lambda_k2, dim=-1).float()).type_as(xq)
