@@ -212,22 +212,22 @@ class DiffAttention(nn.Module):
 
         self.wq = nn.Linear(
             dim,
-            n_heads * (head_dim * 2),
+            n_heads * (self.head_dim * 2),
             bias=False,
         )
         self.wk = nn.Linear(
             dim,
-            n_kv_heads * (head_dim * 2),
+            n_kv_heads * (self.head_dim * 2),
             bias=False,
         )
         self.wv = nn.Linear(
             dim,
-            n_kv_heads * (head_dim * 2),
+            n_kv_heads * (self.head_dim * 2),
             bias=False,
         )
 
         self.wo = nn.Linear(
-            n_heads * (head_dim * 2),
+            n_heads * (self.head_dim * 2),
             dim,
             bias=False,
         )
