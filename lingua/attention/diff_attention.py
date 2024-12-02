@@ -258,7 +258,7 @@ class DiffAttention(nn.Module):
         # B S D -> B S H D
         xq = xq.view(bsz, seq_len, self.n_heads, 2*self.head_dim)
         xk = xk.view(bsz, seq_len, self.n_kv_heads, 2*self.head_dim)
-        xv = xv.view(bsz, seq_len, self.n_kv_heads, 2, self.head_dim)
+        xv = xv.view(bsz, seq_len, self.n_kv_heads, 2*self.head_dim)
         xq, xk = apply_rotary_emb(xq, xk, 1, freq_cis[0:seq_len])
 
         # This condition helps us be easily compatible
@@ -271,7 +271,7 @@ class DiffAttention(nn.Module):
         
         xq1, xq2 = xq[:, :, :, 0], xq[:, :, :, 1]
         xk1, xk2 = xk[:, :, :, 0], xk[:, :, :, 1]
-        
+
         if attn_impl != "flex_attention":
             raise NotImplementedError(
                 f"Diff Attention implementation on {attn_impl} not supported"
@@ -283,6 +283,7 @@ class DiffAttention(nn.Module):
         xq1, xk1, _xv = map(lambda e: e.transpose(1, 2), (xq1, xk1, xv))
         print("xq1 : ", xq1.shape)
         print("xk1 : ", xk1.shape)
+        print("_xv : ", _xv.shape)
         attn1 = flex_attention(xq1, xk1, _xv, block_mask=mask)
         attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
@@ -290,6 +291,7 @@ class DiffAttention(nn.Module):
         xk2 = xk2.reshape(bsz, seq_len, self.n_kv_heads, self.head_dim)
         print("xq2 : ", xq2.shape)
         print("xk2 : ", xk2.shape)
+        print("_xv : ", _xv.shape)
         xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
         attn2 = flex_attention(xq2, xk2, _xv, block_mask=mask)
         attn2 = attn2.transpose(1, 2).contiguous()
