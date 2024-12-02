@@ -73,7 +73,8 @@ class DistributedArgs:
 
     compile_cache_size_limit: int = 8
 
-    spawn_method: str = "forkserver"
+    spawn_method: str = "spawn"
+    #spawn_method: str = "forkserver"
 
 
 @dataclass
