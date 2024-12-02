@@ -281,11 +281,15 @@ class DiffAttention(nn.Module):
         xq1 = xq1.reshape(bsz, seq_len, self.n_heads, self.head_dim)
         xk1 = xk1.reshape(bsz, seq_len, self.n_kv_heads, self.head_dim)
         xq1, xk1, _xv = map(lambda e: e.transpose(1, 2), (xq1, xk1, xv))
+        print("xq1 : ", xq1.shape)
+        print("xk1 : ", xk1.shape)
         attn1 = flex_attention(xq1, xk1, _xv, block_mask=mask)
         attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
         xq2 = xq2.reshape(bsz, seq_len, self.n_heads, self.head_dim)
         xk2 = xk2.reshape(bsz, seq_len, self.n_kv_heads, self.head_dim)
+        print("xq2 : ", xq2.shape)
+        print("xk2 : ", xk2.shape)
         xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
         attn2 = flex_attention(xq2, xk2, _xv, block_mask=mask)
         attn2 = attn2.transpose(1, 2).contiguous()
