@@ -2,7 +2,7 @@
 # This software may be used and distributed according to the terms of the Llama 2 Community License Agreement.
 import tempfile
 from pathlib import Path
-tempfile.tempdir = str(Path('../tmp').resolve())
+tempfile.tempdir = str('../tmp')
 print(f"Temp directory: {tempfile.gettempdir()}")
 
 from copy import deepcopy
