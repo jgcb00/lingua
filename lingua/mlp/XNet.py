@@ -45,8 +45,8 @@ class XnetFeedForward(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # B S D
         x1 = self.w1(x.view_as(x))
-        denom = torch.pow(x1, 2) + torch.pow(self.d, 2)        
-        output = self.w2(self.lambda1 * x1 / denom + self.lambda2 / denom)
+        denom = torch.pow(x1, 2) + torch.pow(self.d[0], 2)        
+        output = self.w2(self.lambda1[0] * x1 / denom + self.lambda2[0] / denom)
         return output
 
     def reset_parameters(self, init_std=None, factor=1.0):
