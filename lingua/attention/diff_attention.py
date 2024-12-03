@@ -23,6 +23,9 @@ def causal_mask(b, h, q_idx, kv_idx):
 def sliding_window_mask(b, h, q_idx, kv_idx, slinding_window):
     return (q_idx - kv_idx) <= slinding_window
 
+@torch.compiler.allow_in_graph
+def flash_attn_function(xq, xk, xv, causal=True):
+    return flash_attn_func(xq, xk, xv, causal=causal)
 
 def create_causal_mask(seqlen, attn_impl, sliding_window):
     if sliding_window is not None and attn_impl == "xformers":
@@ -282,7 +285,7 @@ class DiffAttention(nn.Module):
         #print("xq1 : ", xq1.shape)
         #print("xk1 : ", xk1.shape)
         #print("_xv : ", _xv.shape)
-        attn1 = flash_attn_func(xq1, xk1, xv, causal=True)
+        attn1 = flash_attn_function(xq1, xk1, xv, causal=True)
         #attn1 = attn1.transpose(1, 2).contiguous()  # B H S D -> B S H D
 
         #xq2 = xq2.reshape(bsz, seq_len, self.n_heads, self.head_dim)
@@ -291,7 +294,7 @@ class DiffAttention(nn.Module):
         #print("xk2 : ", xk2.shape)
         #print("_xv : ", _xv.shape)
         #xq2, xk2, _xv = map(lambda e: e.transpose(1, 2), (xq2, xk2, xv))
-        attn2 = flash_attn_func(xq2, xk2, xv, causal=True)
+        attn2 = flash_attn_function(xq2, xk2, xv, causal=True)
         #attn2 = attn2.transpose(1, 2).contiguous()
         
         lambda_1 = torch.exp(torch.sum(self.lambda_q1 * self.lambda_k1, dim=-1).float()).type_as(xq)
@@ -311,7 +314,7 @@ class DiffAttention(nn.Module):
         init_std = init_std or (self.dim ** (-0.5))
         init_std = init_std / factor
 
-        for w in [self.wq, self.wk, self.wv, self.wo]:
+        for w in [self.wq, self.wk, self.wv, self.wo, self.lambda_k1, self.lambda_q1, self.lambda_k2, self.lambda_q2]:
             nn.init.trunc_normal_(
                 w.weight,
                 mean=0.0,
@@ -319,3 +322,4 @@ class DiffAttention(nn.Module):
                 a=-3 * init_std,
                 b=3 * init_std,
             )
+        self.subln.reset_parameters()

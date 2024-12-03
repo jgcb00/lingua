@@ -48,7 +48,7 @@ SBATCH_COMMAND = """#!/bin/bash
 #SBATCH --nodes={nodes}
 #SBATCH --gres=gpu:{ngpus}
 #SBATCH --cpus-per-gpu={ncpu}
-##SBATCH --time={time}
+#SBATCH --time={time}
 #SBATCH --partition={partition}
 #SBATCH --mem={mem}
 ##/logs/%j/%j.stdout
