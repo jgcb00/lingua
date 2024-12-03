@@ -67,9 +67,9 @@ export HF_DATASETS_CACHE="/leonardo_work/BOOST_LCustodi/hf_cache"
 export WANDB_MODE=offline
 
 {go_to_code_dir}
-mkdir ../tmp
-export TMPDIR=../tmp
-export TMP=../tmp
+#mkdir ../tmp
+#export TMPDIR=../tmp
+#export TMP=../tmp
 export OMP_NUM_THREADS=1
 export LAUNCH_WITH="SBATCH"
 export DUMP_DIR={dump_dir}
