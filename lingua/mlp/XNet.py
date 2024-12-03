@@ -46,7 +46,7 @@ class XnetFeedForward(nn.Module):
         # B S D
         x1 = self.w1(x.view_as(x))
         denom = torch.pow(x1, 2) + torch.pow(self.d, 2)        
-        output = self.w2((self.lambda1 * x1 + self.lambda2) / denom)
+        output = self.w2(self.lambda1 * x1 / denom + self.lambda2 / denom)
         return output
 
     def reset_parameters(self, init_std=None, factor=1.0):
