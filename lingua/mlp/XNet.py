@@ -54,7 +54,7 @@ class XnetFeedForward(nn.Module):
         out_init_std = init_std or (self.hidden_dim ** (-0.5))
         in_init_std = in_init_std / factor
         out_init_std = out_init_std / factor
-        for w in [self.w1]:
+        for w in [self.w1, self.w2]:
             nn.init.trunc_normal_(
                 w.weight,
                 mean=0.0,

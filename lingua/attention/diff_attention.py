@@ -314,9 +314,17 @@ class DiffAttention(nn.Module):
         init_std = init_std or (self.dim ** (-0.5))
         init_std = init_std / factor
 
-        for w in [self.wq, self.wk, self.wv, self.wo, self.lambda_k1, self.lambda_q1, self.lambda_k2, self.lambda_q2]:
+        for w in [self.wq, self.wk, self.wv, self.wo]:
             nn.init.trunc_normal_(
                 w.weight,
+                mean=0.0,
+                std=init_std,
+                a=-3 * init_std,
+                b=3 * init_std,
+            )
+        for w in [self.lambda_k1, self.lambda_q1, self.lambda_k2, self.lambda_q2]:
+            nn.init.trunc_normal_(
+                w,
                 mean=0.0,
                 std=init_std,
                 a=-3 * init_std,
