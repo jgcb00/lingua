@@ -6,11 +6,15 @@ seed: 777
 
 optim:
   optimizer: ademamix
-  lr: 5e-4
+  lr: 3e-4
   weight_decay: 0.1
   warmup: 5000
   lr_min_ratio: 0.00001
   clip: 0.1
+  beta2: 0.999
+  beta1: 0.9
+  beta3: 0.9999
+  alpha: 5.0
 
 distributed:
   fsdp_type: full_shard
