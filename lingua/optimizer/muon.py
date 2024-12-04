@@ -61,6 +61,7 @@ class Muon(torch.optim.Optimizer):
                         adamw_eps=adamw_eps, adamw_wd=adamw_wd)
         print(defaults)
         print(muon_params)
+        muon_params = list(muon_params)
         super().__init__(muon_params, defaults)
         print(muon_params)
         #params = list(muon_params)
