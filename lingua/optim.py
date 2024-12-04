@@ -11,6 +11,7 @@ from lingua.optimizer.mars import MARS
 from lingua.optimizer.ademamix import AdEMAMix
 from lingua.optimizer.muon import Muon
 from lingua.optimizer.cautious import CautiousAdamW
+from lingua.optimizer.cautious_lion import CautiousLion
 logger = logging.getLogger()
 
 
@@ -142,6 +143,13 @@ def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
             lr=args.lr,
             betas=(args.beta1, args.beta2),
             eps=args.epsilon,
+            weight_decay=args.weight_decay,
+        )
+    elif args.optimizer == "lion":
+        optimizer = CautiousLion(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
             weight_decay=args.weight_decay,
         )
     else:
