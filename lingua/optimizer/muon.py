@@ -61,10 +61,16 @@ class Muon(torch.optim.Optimizer):
                         adamw_eps=adamw_eps, adamw_wd=adamw_wd)
 
         params = list(muon_params)
+        print(params)
         adamw_params = list(adamw_params) if adamw_params is not None else []
         params.extend(adamw_params)
         super().__init__(params, defaults)
+        print("Muon optimizer initialization")
+        self.init_muon(muon_params, adamw_params)
+        print("Muon optimizer initialization done")
 
+
+    def init_muon(self, muon_params, adamw_params):
         # Sort parameters into those for which we will use Muon, and those for which we will not
         for p in muon_params:
             # Use Muon for every parameter in muon_params which is >= 2D and doesn't look like an embedding or head layer
