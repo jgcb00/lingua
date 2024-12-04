@@ -73,9 +73,6 @@ class Muon(torch.optim.Optimizer):
 
     def init_muon(self, muon_params, adamw_params):
         # Sort parameters into those for which we will use Muon, and those for which we will not
-        muon_params = list(muon_params)
-        print("Muon params type :", type(muon_params))
-        print("Muon params:", len(muon_params))
         for p in muon_params:
             # Use Muon for every parameter in muon_params which is >= 2D and doesn't look like an embedding or head layer
             if p.ndim >= 2 and p.size(0) < 10000:
