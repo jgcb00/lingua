@@ -59,6 +59,10 @@ class Muon(torch.optim.Optimizer):
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
                         adamw_lr_ratio=adamw_lr/lr, adamw_betas=adamw_betas,
                         adamw_eps=adamw_eps, adamw_wd=adamw_wd)
+        print(defaults)
+        print(muon_params)
+        super().__init__(muon_params, defaults)
+        print(muon_params)
         #params = list(muon_params)
         #print("Muon params type :", type(params))
         #print(params)
@@ -67,7 +71,6 @@ class Muon(torch.optim.Optimizer):
         #print("Muon optimizer initialization")
         self.init_muon(muon_params, adamw_params)
         print("Muon optimizer initialization done")
-        super().__init__(muon_params, defaults)
 
 
     def init_muon(self, muon_params, adamw_params):
