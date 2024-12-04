@@ -59,8 +59,6 @@ class Muon(torch.optim.Optimizer):
         defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov, ns_steps=ns_steps,
                         adamw_lr_ratio=adamw_lr/lr, adamw_betas=adamw_betas,
                         adamw_eps=adamw_eps, adamw_wd=adamw_wd)
-        super().__init__(muon_params, defaults)
-
         #params = list(muon_params)
         #print("Muon params type :", type(params))
         #print(params)
@@ -69,6 +67,7 @@ class Muon(torch.optim.Optimizer):
         #print("Muon optimizer initialization")
         self.init_muon(muon_params, adamw_params)
         print("Muon optimizer initialization done")
+        super().__init__(muon_params, defaults)
 
 
     def init_muon(self, muon_params, adamw_params):
@@ -80,9 +79,9 @@ class Muon(torch.optim.Optimizer):
             else:
                 self.state[p]['use_muon'] = False
             print("Muon:", p.size(), self.state[p]['use_muon'])
-        for p in adamw_params:
-            # Do not use Muon for parameters in adamw_params
-            self.state[p]['use_muon'] = False
+        # for p in adamw_params:
+        #     # Do not use Muon for parameters in adamw_params
+        #     self.state[p]['use_muon'] = False
 
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
