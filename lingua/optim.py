@@ -10,6 +10,7 @@ from torch.optim import AdamW, lr_scheduler
 from lingua.optimizer.mars import MARS
 from lingua.optimizer.ademamix import AdEMAMix
 from lingua.optimizer.muon import Muon
+from lingua.optimizer.cautious import CautiousAdamW
 logger = logging.getLogger()
 
 
@@ -135,6 +136,16 @@ def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
             adamw_eps=args.epsilon,
             adamw_wd=args.weight_decay,
         )
+    elif args.optimizer == "cautious":
+        optimizer = CautiousAdamW(
+            model.parameters(),
+            lr=args.lr,
+            betas=(args.beta1, args.beta2),
+            eps=args.epsilon,
+            weight_decay=args.weight_decay,
+        )
+    else:
+        raise NotImplementedError(f"Unknown optimizer: {args.optimizer}")
 
     # scheduler
     lr_fn = build_lr_fn(args, n_steps)

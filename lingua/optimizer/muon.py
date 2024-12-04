@@ -62,6 +62,7 @@ class Muon(torch.optim.Optimizer):
         super().__init__(muon_params, defaults)
 
         params = list(muon_params)
+        print("Muon params type :", type(params))
         print(params)
         adamw_params = list(adamw_params) if adamw_params is not None else []
         params.extend(adamw_params)
