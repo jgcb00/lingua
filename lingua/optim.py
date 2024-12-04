@@ -9,6 +9,7 @@ from torch import nn
 from torch.optim import AdamW, lr_scheduler
 from lingua.optimizer.mars import MARS
 from lingua.optimizer.ademamix import AdEMAMix
+from lingua.optimizer.muon import Muon
 logger = logging.getLogger()
 
 
@@ -125,6 +126,14 @@ def build_optimizer(model: nn.Module, args: OptimArgs, n_steps: int):
             alpha=args.alpha,
             eps=args.epsilon,
             weight_decay=args.weight_decay,
+        )
+    elif args.optimizer == "muon":
+        optimizer = Muon(
+            model.parameters(),
+            adamw_lr=args.lr,
+            adamw_betas=(args.beta1, args.beta2),
+            adamw_eps=args.epsilon,
+            adamw_wd=args.weight_decay,
         )
 
     # scheduler
