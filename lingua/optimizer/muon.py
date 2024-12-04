@@ -21,12 +21,12 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
     if G.size(0) > G.size(1):
         X = X.T
     for _ in range(steps):
-        A = A.contiguous()
-        B = B.contiguous()
-        X = X.contiguous()
         A = X @ X.T
         B = b * A + c * A @ A
         X = a * X + B @ X
+        A = A.contiguous()
+        B = B.contiguous()
+        X = X.contiguous()
     if G.size(0) > G.size(1):
         X = X.T
     return X
