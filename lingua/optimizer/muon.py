@@ -72,13 +72,16 @@ class Muon(torch.optim.Optimizer):
                 self.state[p]['use_muon'] = True
             else:
                 self.state[p]['use_muon'] = False
+            print("Muon:", p.size(), self.state[p]['use_muon'])
         for p in adamw_params:
             # Do not use Muon for parameters in adamw_params
             self.state[p]['use_muon'] = False
 
         if 'WORLD_SIZE' in os.environ:
             self.world_size = int(os.environ['WORLD_SIZE'])
+            print("Optimizer world size:", self.world_size)
             self.rank = int(os.environ['RANK'])
+            print("Optimizer rank:", self.rank)
         else:
             self.world_size = 1
             self.rank = 0
